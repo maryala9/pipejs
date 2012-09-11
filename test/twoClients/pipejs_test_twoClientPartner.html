@@ -1,0 +1,45 @@
+<head>
+    <style style="text/css">
+        td { 
+            width: 100px; 
+            height: 40px; 
+        }
+        th { 
+            width: 100px; 
+            height: 40px; 
+        }
+    </style>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.8.1/jquery.min.js" type="text/javascript"></script>
+    <script type="text/javascript">    
+    function createFile(size){
+        var buff = new ArrayBuffer(size);
+        var view = new Int8Array(buff);
+        for(var i=0; i<size; i++){
+            var val = Math.floor(Math.random() * 255);
+            view[i] = val;
+        }
+        var bb = new WebKitBlobBuilder();
+        bb.append(buff);
+        //var b = new Blob(buff);
+        return bb.getBlob();
+        //return b;
+    }
+
+    var ws = new WebSocket("ws://localhost:8088/pipes/123412344444");
+    ws.onmessage = function(evt){
+            alert(evt.data);
+        };
+
+    </script>
+</head>
+<body>
+    <h1> Unit test - pipe.js </ h1>
+
+    <div>
+        <h4> Test results: </h4>
+        <table id="test-result">
+            <tr> <th>data type</th>  <th>data size</th>   <th> test succesfull </th> </ tr> 
+        </table>
+    </div>
+</body>
+
