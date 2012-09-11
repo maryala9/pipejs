@@ -12,7 +12,7 @@ rfc6455 = require('./rfc6455/rfc6455.js');
 //
 port = 8088;
 useNagleAlg = true;
-sessionPath = "/pipes";
+sessionPath = "/sessions";
 pipeIdLength = 12;
 
 ///

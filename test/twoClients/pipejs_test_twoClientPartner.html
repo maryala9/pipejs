@@ -25,7 +25,7 @@
         //return b;
     }
 
-    var ws = new WebSocket("ws://localhost:8088/pipes/123412344444");
+    var ws = new WebSocket("ws://localhost:8088/sessions/123412344444");
     ws.onmessage = function(evt){
             alert(evt.data);
         };
