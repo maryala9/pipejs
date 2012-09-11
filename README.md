@@ -1,7 +1,9 @@
 PIPE|JS 0.2
 ===========
 
-PIPE|JS can connect two client-side websockets directly to each other using an intermediate server. This allows you to send websocket messages directly between two clients without passing the messages manually, using server side code. It could also be usefull for sending big chunks of data between two clients without delay, because it directly pipes the streams of payload between the two client WebSockets instead of waiting for the whole messages to arrive.
+PIPE|JS connects two client-side websockets directly to each other using an intermediate server. 
+This allows you to send websocket messages directly between the two client without creating server-side code. 
+It is also usefull for sending big chunks of data between two clients without delay, because it directly pipes the streams the payload instead of waiting for whole messages to arrive.
 
 Attention: This project is still under development and in a very early phase: 
 using it in critical applications would be insane. It might even not work at
@@ -10,7 +12,7 @@ all.
 Features
 --------
 
-- The server doesn't wait until a message is received completely. As soon as the first bytes of a message stream are received, the server starts sending it to the other client. This allows you to pass big chunks of data between two clients, without worrying about the delay.
+- Direct streaming of payload. The server does not wait until a message is received completely. As soon as the first bytes of a message stream are received, the server starts sending it to the other client. This allows you to pass big chunks of data between two clients without extra delay.
 
 - Support for all types of websocket messages (Binary, Text, etc..).
 

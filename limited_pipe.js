@@ -1,14 +1,14 @@
 ///
 //	Provides normal pipe functionality, but is able to limit the written bytes.
 //	Calls the callback when all data is written and returns eventual overhead.
-
+//
 var events = require('events');
 var util = require('util');
 
 
 ///
 //	Application
-
+//
 pipe = function(source, dest, options, callback) {
   //var source = this;
   var limit = options.limit; 

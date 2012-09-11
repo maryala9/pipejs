@@ -72,7 +72,6 @@ function addConnection(wsConn){
 function getPipeId(path){
   var cleaned = path.replace(sessionPath + "/", "");
   if(cleaned.length === pipeIdLength){
-    //no folders
     if(cleaned.indexOf("/") === -1){
       return cleaned;
     }
