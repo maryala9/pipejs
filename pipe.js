@@ -12,8 +12,8 @@ rfc6455 = require('./rfc6455/rfc6455.js');
 //
 port = 8088;
 useNagleAlg = true;
-sessionPath = "/sessions";
-pipeIdLength = 12;
+sessionPath = "/session";
+pipeIdMinLength = 5;
 
 ///
 //  Applications
@@ -71,7 +71,7 @@ function addConnection(wsConn){
 
 function getPipeId(path){
   var cleaned = path.replace(sessionPath + "/", "");
-  if(cleaned.length === pipeIdLength){
+  if(cleaned.length >= pipeIdMinLength){
     if(cleaned.indexOf("/") === -1){
       return cleaned;
     }
