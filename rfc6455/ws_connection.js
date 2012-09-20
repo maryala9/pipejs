@@ -20,7 +20,7 @@ Connection.prototype.close = function(cause){
 
 Connection.prototype.ping = function(){
   // Not implemented yet.
-  //send a ping.
+  // send a ping to check if the connection is still alive.
 }
 
 module.exports = Connection;

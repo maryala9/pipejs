@@ -5,7 +5,7 @@
 ///
 //  Require
 //
-var masking_provider = require('./masking_provider.js'),
+var Masking_provider = require('./masking_provider.js'),
     lpipe = require('../limited_pipe.js'),
     events = require('events');
 
@@ -159,7 +159,7 @@ Frame.prototype.redirect = function(stream){
     stream.write(header);
 
     /*  Redirect Payload  */
-    var maskProv = masking_provider(this.masking_key);
+    var maskProv = new Masking_provider(this.masking_key);
     maskProv.maskData(this.body);
     
     console.log("Writing payload to socket: " + this.body.length);
@@ -167,12 +167,19 @@ Frame.prototype.redirect = function(stream){
 
     var missing = this.length - this.body.length;
     if(missing){
+
+      //preserves the context of maskData.
+      var msk = function(msgBuff){
+        maskProv.maskData(msgBuff);
+      }
+
       //mask the remaining data of this frame.
-      this.socket.on('data', maskProv.maskData);
+      this.socket.on('data', msk);
+
       //limited pipe, that only streams <missing> bytes of data.
       lpipe(this.socket, stream, { limit:missing } , function(overhead){
         //remove masking provider from stream.
-        self.socket.removeListener('data',maskProv.maskData);
+        self.socket.removeListener('data',msk);
         
         if(overhead){
           //undo the unnecessary masking.
