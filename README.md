@@ -1,7 +1,7 @@
-PIPE|JS 0.2
+PIPE | JS 0.2
 ===========
 
-PIPE|JS connects two client-side websockets directly to each other using an intermediate server. 
+PIPE | JS connects two client-side websockets directly to each other using an intermediate server. 
 This allows you to send websocket messages directly between the two client without creating server-side code. 
 It is also usefull for sending big chunks of data between two clients without delay, because it directly pipes the streams the payload instead of waiting for whole messages to arrive.
 

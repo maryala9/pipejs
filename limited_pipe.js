@@ -15,16 +15,16 @@ pipe = function(source, dest, options, callback) {
   var written = 0;  		 
 
   function ondata(chunk) {
-	  console.log("PIPE: chunk arrived. length: " + chunk.length);
+	  //console.log("PIPE: chunk arrived. length: " + chunk.length);
     if (dest.writable) {
       written += chunk.length; 
       if(written < limit){     
 	  	//console.log("writing chunk to output.");
 	    //just write the chunk to the output stream.
-      console.log("PIPE writing " + chunk.length + " bytes to socket.");
-      console.log("Buffer size: " + source.bufferSize);
+      //console.log("PIPE writing " + chunk.length + " bytes to socket.");
+      //console.log("Buffer size: " + source.bufferSize);
       if (false === dest.write(chunk) && source.pause){
-        console.log("Destination buffer is full. Pausing source socket.");
+        //console.log("Destination buffer is full. Pausing source socket.");
         source.pause();
       }
 	  }       			    
@@ -44,7 +44,7 @@ pipe = function(source, dest, options, callback) {
       }
 
       //write last chunk to target.
-      console.log("PIPE writing last " + last.length + " bytes to socket.");
+      //console.log("PIPE writing last " + last.length + " bytes to socket.");
       dest.write(last);   
 
       if(source.pause){   

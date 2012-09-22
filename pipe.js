@@ -25,7 +25,7 @@ var sessions = {};
 httpServer.on('upgrade', function(req, socket, head) {
 
 	var vers = req.headers["sec-websocket-version"];
-	console.log("received websocket request version: " + vers);
+	//console.log("received websocket request version: " + vers);
 
 	if (vers == "13") {
     socket.setNoDelay(!useNagleAlg);
@@ -44,7 +44,7 @@ httpServer.on('upgrade', function(req, socket, head) {
 function addConnection(wsConn){
   var pid = getPipeId(wsConn.path);
   if(!pid){
-    console.log("Cannot add connection. Pipe path is invalid: " + wsConn.path);
+    //console.log("Cannot add connection. Pipe path is invalid: " + wsConn.path);
     return;
   }
 
@@ -59,7 +59,7 @@ function addConnection(wsConn){
   else{
     //Add to existing session
     if(session.length !== 1){
-      console.log("Cannot add connection. Session is already full: " + session);
+      //console.log("Cannot add connection. Session is already full: " + session);
       //Session must contain exactly one other sesion.
     }
     else{
@@ -86,8 +86,8 @@ function pipeWebSockets(session){
     src.on('Message',
       function(msg){
         msg.on('Frame', function(frame){
-          console.log("Session:" +  src.pid + " redirecting frame\n"
-          + "Source port: " + src.socket.remotePort + "Dest port: " + targ.socket.remotePort);
+          /* console.log("Session:" +  src.pid + " redirecting frame\n"
+          + "Source port: " + src.socket.remotePort + "Dest port: " + targ.socket.remotePort); */
           frame.redirect(targ.socket);
         });
       });
