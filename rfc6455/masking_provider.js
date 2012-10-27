@@ -18,14 +18,7 @@ var MaskingProvider = function(masking_key) {
 }
 
 MaskingProvider.prototype.maskData = function(msgBuff) {
-  console.log("masking a blob of length: " + msgBuff.length);
-  try{
-    var offsMsk = this.m.readInt32BE(this.offs);
-  }
-  catch(e){
-    console.error("Message buffer: ",msgBuff);
-    console.error("Mask buffer: ",this.m);
-  }
+  var offsMsk = this.m.readInt32BE(this.offs);
 
   /* mask bytes 'fast' */
   var fst = (msgBuff.length - (msgBuff.length % 4));
@@ -33,22 +26,13 @@ MaskingProvider.prototype.maskData = function(msgBuff) {
     msgBuff.writeInt32BE(offsMsk ^ msgBuff.readInt32BE(j),j);  
   }
   
-  try{
-    /* mask overhanging bytes */
-    var slw = msgBuff.length % 4;
-    for (var i = fst; i < msgBuff.length; i++) {
-      var oct = this.m.readInt8((i + this.offs) % 4);
-      msgBuff.writeInt8(oct ^ msgBuff.readInt8(i), i);
-    }
-    this.offs = (this.offs + msgBuff.length) % 4;
+  /* mask overhanging bytes */
+  var slw = msgBuff.length % 4;
+  for (var i = fst; i < msgBuff.length; i++) {
+    var oct = this.m.readInt8((i + this.offs) % 4);
+    msgBuff.writeInt8(oct ^ msgBuff.readInt8(i), i);
   }
-  catch(e){
-    console.log("exception: ", e);
-    console.log("this.offs " + this.offs);
-    console.log(msgBuff);
-    console.log("i: " + i);
-    console.trace();
-  }
+  this.offs = (this.offs + msgBuff.length) % 4;
 }
 
 /* may be needed to unmask data */
