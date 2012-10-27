@@ -12,7 +12,7 @@ rfc6455 = require('./rfc6455/rfc6455.js');
 //
 port = 8088;
 useNagleAlg = true;
-sessionPath = "/session";
+sessionPath = "/channel";
 pipeIdMinLength = 5;
 
 ///
@@ -44,7 +44,7 @@ httpServer.on('upgrade', function(req, socket, head) {
 function addConnection(wsConn){
   var pid = getPipeId(wsConn.path);
   if(!pid){
-    //console.log("Cannot add connection. Pipe path is invalid: " + wsConn.path);
+    console.log("Cannot add connection. Pipe path is invalid: " + wsConn.path);
     return;
   }
 
@@ -55,16 +55,18 @@ function addConnection(wsConn){
       sessions[pid] = [];
       sessions[pid].push(wsConn); 
       wsConn.pid = pid;
+      console.log("created a new session.");
   }
   else{
     //Add to existing session
     if(session.length !== 1){
-      //console.log("Cannot add connection. Session is already full: " + session);
+      console.log("Cannot add connection. Session is already full: " + session);
       //Session must contain exactly one other sesion.
     }
     else{
       session.push(wsConn);
       pipeWebSockets(session);
+      console.log("Connection added to session.");
     }
   }
 }
@@ -78,6 +80,11 @@ function getPipeId(path){
   }
 }
 
+
+/**
+ *  Pipes the output stream of one client to 
+ *  the input stream of the other client and reversely.
+ */
 function pipeWebSockets(session){
   var Conn1 = session[0], 
       Conn2 = session[1];
@@ -85,7 +92,9 @@ function pipeWebSockets(session){
   function pipeOneWay(src,targ){
     src.on('Message',
       function(msg){
+        targ.touch();
         msg.on('Frame', function(frame){
+            targ.touch();
           /* console.log("Session:" +  src.pid + " redirecting frame\n"
           + "Source port: " + src.socket.remotePort + "Dest port: " + targ.socket.remotePort); */
           frame.redirect(targ.socket);
@@ -101,6 +110,7 @@ function pipeWebSockets(session){
   pipeOneWay(Conn1,Conn2);
   pipeOneWay(Conn2,Conn1);
 }
+
 
 httpServer.listen(port);
 console.log("Listening on port " + port);

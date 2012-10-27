@@ -8,38 +8,53 @@
 var MaskingProvider = function(masking_key) {
 	this.offs = 0;
 	this.mask = masking_key;
-
-	// write mask to buffer. Doubling it allows us to 
+  
+  /*
+   *  Buffer that is used for masking.
+   */
 	this.m = new Buffer(8);
 	this.m.writeInt32BE(this.mask, 0);
   this.m.writeInt32BE(this.mask, 4);
 }
 
 MaskingProvider.prototype.maskData = function(msgBuff) {
-  var offsMsk = this.m.readInt32BE(this.offs);
+  console.log("masking a blob of length: " + msgBuff.length);
+  try{
+    var offsMsk = this.m.readInt32BE(this.offs);
+  }
+  catch(e){
+    console.error("Message buffer: ",msgBuff);
+    console.error("Mask buffer: ",this.m);
+  }
 
-  //all bytes that can be masked "fast"
+  /* mask bytes 'fast' */
   var fst = (msgBuff.length - (msgBuff.length % 4));
-  //mask bytes "fast".
   for(var j = 0; j < fst; j += 4){
     msgBuff.writeInt32BE(offsMsk ^ msgBuff.readInt32BE(j),j);  
   }
   
-  //all overhanging bytes must be masked byte-wise
-  var slw = msgBuff.length % 4;
-	for (var i = fst; i < msgBuff.length; i++) {
-		//get mask octet nr. i
-		var oct = this.m.readInt8((i + this.offs) % 4);
-		//xor single octet.
-		msgBuff.writeInt8(oct ^ msgBuff.readInt8(i), i);
-	}
-  //update offset for next masking.
-	this.offs = (this.offs + msgBuff.length) % 4;
+  try{
+    /* mask overhanging bytes */
+    var slw = msgBuff.length % 4;
+    for (var i = fst; i < msgBuff.length; i++) {
+      var oct = this.m.readInt8((i + this.offs) % 4);
+      msgBuff.writeInt8(oct ^ msgBuff.readInt8(i), i);
+    }
+    this.offs = (this.offs + msgBuff.length) % 4;
+  }
+  catch(e){
+    console.log("exception: ", e);
+    console.log("this.offs " + this.offs);
+    console.log(msgBuff);
+    console.log("i: " + i);
+    console.trace();
+  }
 }
 
-// force a new offset, for example to unmask data that has already been masked.
+/* may be needed to unmask data */
 MaskingProvider.prototype.forceOffset = function(o){
   this.offs = o % 4;
+  console.log("forcing new offset: " + this.offs);
 }
 
 module.exports = MaskingProvider;

@@ -1,0 +1,30 @@
+tting busy to false.
+   debug - emitting heartbeat for client sJSs2mfIyPGxOtyfMBTU
+   debug - websocket writing 2::
+   debug - set heartbeat timeout for client sJSs2mfIyPGxOtyfMBTU
+   debug - got heartbeat packet
+   debug - cleared heartbeat timeout for client sJSs2mfIyPGxOtyfMBTU
+   debug - set heartbeat interval for client sJSs2mfIyPGxOtyfMBTU
+   debug - websocket writing 5:::{"name":"progress","args":[{"hash":"h-284-0","progress":46.78291327191045}]}
+setting busy to true
+setting busy to false.
+setting busy to true
+setting busy to false.
+sending ping...
+pong received
+   debug - websocket writing 5:::{"name":"progress","args":[{"hash":"h-284-0","progress":62.3772176958806}]}
+sending ping...
+setting busy to true
+
+assert.js:102
+  throw new assert.AssertionError({
+        ^
+AssertionError: Trying to read beyond buffer length
+    at readInt32 (buffer.js:777:12)
+    at Buffer.readInt32BE (buffer.js:795:10)
+    at MaskingProvider.maskData (/home/matz/ownCloud/Projects/shared-online-folder/master/pipe.js/rfc6455/masking_provider.js:19:24)
+    at Frame.redirect (/home/matz/ownCloud/Projects/shared-online-folder/master/pipe.js/rfc6455/ws_frame.js:191:15)
+    at Socket.ondata (/home/matz/ownCloud/Projects/shared-online-folder/master/pipe.js/limited_pipe.js:57:7)
+    at Socket.EventEmitter.emit (events.js:115:20)
+    at TCP.onread (net.js:395:14)
+matz@matz-P5Q-PRO:~/ownCloud/Projects/shared-online-folder/master$    debug - emitting heartbeat for client pd3PB9Sedn1udVulMBTT

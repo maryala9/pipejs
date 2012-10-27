@@ -79,7 +79,7 @@ function createFromBuffer(buffer, socket) {
 		frame.length = leastSignif + (4294967296 * mostSignif);
 		//console.log("64 bit length: " + frame.length);
 	}
-
+  console.log("Length of frame: " + frame.length);
 	/*    Read the mask   */
 	if (frame.mask) {
 		if (buffer.length < offset) {
@@ -100,6 +100,7 @@ function createFromBuffer(buffer, socket) {
 
 ///   Create a new Frame. 
 //  socket: the socket where this frame is coming from.
+		//get mask octet nr. i
 //  type: type string
 //  find: bool
 //  payload:  buffer
@@ -182,12 +183,15 @@ Frame.prototype.redirect = function(stream) {
 				limit: missing
 			},
 			function(overhead) {
+        debugger;
+        console.log("Overhead returned by pipe: ", overhead);
 				//remove masking provider from stream.
 				self.socket.removeListener('data', msk);
 
 				if (overhead) {
 					//undo the unnecessary masking.
-					maskProv.forceOffset(this.length);
+          console.log("self.length ", self.length);
+					maskProv.forceOffset(self.length);
 					maskProv.maskData(overhead);
 				}
 				//The overhead is the start of the next frame.
@@ -234,6 +238,8 @@ Frame.prototype.getHeader = function() {
 
 	//NO FRAMING. ONLY DONE BY CLIENT.
 	var t = header.slice(0, offs);
+
+  console.log("created header: ",t);
 	return t;
 }
 
