@@ -90,11 +90,14 @@ function pipeWebSockets(session){
       Conn2 = session[1];
 
   function pipeOneWay(src,targ){
+    /*  */
+    src.socket.on('data',function(){
+      targ.touch();
+      });
+
     src.on('Message',
       function(msg){
-        targ.touch();
         msg.on('Frame', function(frame){
-            targ.touch();
           /* console.log("Session:" +  src.pid + " redirecting frame\n"
           + "Source port: " + src.socket.remotePort + "Dest port: " + targ.socket.remotePort); */
           frame.redirect(targ.socket);

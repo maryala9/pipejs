@@ -15,7 +15,6 @@ pipe = function(source, dest, options, callback) {
   var written = 0;  		 
 
   function ondata(chunk) {
-    dest.touch();
     if (dest.writable) {
       written += chunk.length; 
       if(written < limit){     
