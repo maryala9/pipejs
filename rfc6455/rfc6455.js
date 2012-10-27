@@ -145,6 +145,7 @@ function sendPing(socket,connection){
     var pingFrame = new ws_frame.Frame(null,'ping',true,null);
     socket.write(pingFrame.getHeader());
     ponged = false;
+    /*
     setTimeout(function(){
       if(!ponged){
         console.log("Error: The client did not answer on a ping. " +
@@ -152,6 +153,7 @@ function sendPing(socket,connection){
         endConnection(connection);     
         }
       },pingResponseTime);
+      */
   }else{
     console.log(socket.remotePort, " is busy. Not pinging...");
   }
