@@ -25,7 +25,7 @@ var net = require('net'),
  */
 var secWebSocketGUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 var closeTimout = 1000; //ms
-var pingResponseTime = 400; //ms
+var pingResponseTime = 1000; //ms
 
 
 /**
@@ -47,7 +47,7 @@ var ponged;
  * if the application is idle.
  */
 var actionLog = (function(){
-  var d = 3000;
+  var d = 5000;
   var lastAct = Date.now();
   return {
     action: function(){
@@ -101,7 +101,7 @@ function handleRequest(req, socket, head, conn) {
           actionLog.action();
         }
 				acceptRequest(secKey, head, socket, Connection);
-        pingInterval(750,socket,Connection);
+        pingInterval(5000,socket,Connection);
 				return Connection;
 			}
 		};
