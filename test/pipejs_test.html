@@ -78,10 +78,10 @@ function sendAndRecv(data, callback){
         ws.send(data); 
     }
     
-    var ws = new WebSocket("ws://localhost:8088/session/123412341234");
+    var ws = new WebSocket("ws://localhost:8088/channel/123415541234");
     var ws2;
     ws.onopen = function(){
-        ws2 = new WebSocket("ws://localhost:8088/session/123412341234");
+        ws2 = new WebSocket("ws://localhost:8088/channel/123415541234");
         ws2.onopen = function(){
         	doTests (2*1024*1024, 1, (2*1024*1024) + 100, function(){
 		    ws2.close();

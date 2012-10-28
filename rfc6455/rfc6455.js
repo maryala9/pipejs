@@ -25,7 +25,7 @@ var net = require('net'),
  */
 var secWebSocketGUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 var closeTimout = 1000; //ms
-var pingResponseTime = 1000; //ms
+var pingResponseTime = 500; //ms
 
 
 /**
@@ -47,7 +47,7 @@ var ponged;
  * if the application is idle.
  */
 var actionLog = (function(){
-  var d = 5000;
+  var d = 1000;
   var lastAct = Date.now();
   return {
     action: function(){
@@ -97,11 +97,11 @@ function handleRequest(req, socket, head, conn) {
          * Logs a new action to avoid pinging.
          */
         Connection.touch = function(){
-          console.log(socket.remotePort, "touched...");
+          console.log(socket.remotePort, ": touched...");
           actionLog.action();
         }
 				acceptRequest(secKey, head, socket, Connection);
-        pingInterval(5000,socket,Connection);
+        pingInterval(750,socket,Connection);
 				return Connection;
 			}
 		};
@@ -258,13 +258,11 @@ function handleMessages(socket, connection) {
 		switch (frame.OpCode) {
 		case 0x0:
 			//continuation frame
-      console.log("continuation frame");
       message.fin = frame.fin;
 			handleDataFrame(message);
 			break;
 		case 0x1:
 			//text frame
-      console.log("text frame");
 			if (message && message.completed == false) {
 				console.log("Error: New Message received while old one wasn't complete.");
 			}
@@ -275,7 +273,6 @@ function handleMessages(socket, connection) {
 			break;
 		case 0x2:
 			//binary frame
-      console.log("binary frame");
 			if (message && message.completed == false) {
 				console.log("Error: New Message received while old one wasn't complete.");
 			}
@@ -286,7 +283,6 @@ function handleMessages(socket, connection) {
 			break;
 		case 0x8:
 			//connection close
-      console.log("connection close frame");
 			if (connection.state !== "closing") {
 				connection.close();
 			}
@@ -296,13 +292,11 @@ function handleMessages(socket, connection) {
 			}
 			break;
 		case 0x9:
-      console.log("ping frame");
 			//ping
 			handlePing();
 			break;
 		case 0xA:
 			//pong
-      console.log("pong frame");
 			handlePong();
 			break;
 		}
@@ -310,7 +304,6 @@ function handleMessages(socket, connection) {
 		/*   Handle a data frame with the given message as context.   */
 
 		function handleDataFrame(message) {
-
 			frame.on('transferred', function(overhead) {
 				if (overhead) {
 					handleHeader(overhead);
@@ -327,7 +320,6 @@ function handleMessages(socket, connection) {
 		/*  Handling of control frames  */
 
 		function handlePing() {
-			console.log("ping received");
 			var pong = new ws_frame.Frame(null, 'Pong', true);
 			socket.write(pong.getHeader());
 			socket.once('data', handleHeader);

@@ -79,7 +79,6 @@ function createFromBuffer(buffer, socket) {
 		frame.length = leastSignif + (4294967296 * mostSignif);
 		//console.log("64 bit length: " + frame.length);
 	}
-  console.log("Length of frame: " + frame.length);
 	/*    Read the mask   */
 	if (frame.mask) {
 		if (buffer.length < offset) {
@@ -154,11 +153,27 @@ Frame.prototype.redirect = function(stream) {
 	//Masked bit is set?
 	if (this.mask) {
 		var self = this;
+    var overhead;
 
 		/*  Create answer header  */
 		var header = this.getHeader();
 		var offs = header.length;
 		stream.write(header);
+
+    /* Calculate missing bytes */
+		var missing = this.length - this.body.length;
+
+    if(missing < 0){
+      console.log("#####  The body is longer than the message. splitting it up.  ######");   
+      console.log("old body length " + this.body.length);
+      /* The body is longer than the message. Split overhead from body.  */
+      overhead = this.body.slice(this.length,this.body.length);
+
+      /* set the message as new body */
+      this.body = this.body.slice(0,this.length);
+
+      console.log("new body length; new overhead length;",this.body.length, overhead.length);
+    }
 
 		/*  Redirect Payload  */
 		var maskProv = new Masking_provider(this.masking_key);
@@ -166,40 +181,48 @@ Frame.prototype.redirect = function(stream) {
 
 		//console.log("Writing payload to socket: " + this.body.length);
 		stream.write(this.body);
+      
+    console.log("calculating missing length from this.length - this.body.length ", this.length, this.body.length);
 
-		var missing = this.length - this.body.length;
-		if (missing) {
+		if (missing > 0) {
+      /* the message is longer than the received chunk */
 
-			//preserves the context of maskData.
 			var msk = function(msgBuff) {
 				maskProv.maskData(msgBuff);
 			}
-
-			//mask the remaining data of this frame.
+      
+      /* mask every chunk of remaining data when received */
 			this.socket.on('data', msk);
+      
 
-			//limited pipe, that only streams <missing> bytes of data.
+      /* stream <missing> bytes of data to the other socket */
 			lpipe(this.socket, stream, {
 				limit: missing
 			},
 			function(overhead) {
-        debugger;
         console.log("Overhead returned by pipe: ", overhead);
-				//remove masking provider from stream.
+        /*  remove the old masking provider from the stream */
 				self.socket.removeListener('data', msk);
 
 				if (overhead) {
-					//undo the unnecessary masking.
+          /* Undo the unnecessary masking */
           console.log("self.length ", self.length);
 					maskProv.forceOffset(self.length);
 					maskProv.maskData(overhead);
 				}
-				//The overhead is the start of the next frame.
+        /* Emit the overhead. This is the start of the next data frame  */
 				self.emit('transferred', overhead);
 			});
 		}
 		else {
-			this.emit('transferred')
+      if(overhead){
+        /* Emit the overhead. This is the start of the next data frame  */
+        this.emit('transferred',overhead);
+      }
+      else{
+        /* There is no overhead. Emit only the 'tranferred' event */
+        this.emit('transferred')
+      }
 		}
 	}
 	else {

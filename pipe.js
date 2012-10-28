@@ -23,7 +23,6 @@ var busy = false;
 var sessions = {};
 
 httpServer.on('upgrade', function(req, socket, head) {
-
 	var vers = req.headers["sec-websocket-version"];
 	//console.log("received websocket request version: " + vers);
 
@@ -90,7 +89,7 @@ function pipeWebSockets(session){
       Conn2 = session[1];
 
   function pipeOneWay(src,targ){
-    /*  */
+
     src.socket.on('data',function(){
       targ.touch();
       });
@@ -98,8 +97,6 @@ function pipeWebSockets(session){
     src.on('Message',
       function(msg){
         msg.on('Frame', function(frame){
-          /* console.log("Session:" +  src.pid + " redirecting frame\n"
-          + "Source port: " + src.socket.remotePort + "Dest port: " + targ.socket.remotePort); */
           frame.redirect(targ.socket);
         });
       });

@@ -38,7 +38,6 @@ MaskingProvider.prototype.maskData = function(msgBuff) {
 /* may be needed to unmask data */
 MaskingProvider.prototype.forceOffset = function(o){
   this.offs = o % 4;
-  console.log("forcing new offset: " + this.offs);
 }
 
 module.exports = MaskingProvider;

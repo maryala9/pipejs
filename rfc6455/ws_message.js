@@ -14,6 +14,7 @@ function Message(type) {
 }
 
 Message.prototype = new events.EventEmitter();
+
 Message.prototype.newFrame = function(frame) {
 	if (frame.fin) {
 		this.completed = true;

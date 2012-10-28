@@ -12,6 +12,7 @@ var util = require('util');
 pipe = function(source, dest, options, callback) {
   //var source = this;
   var limit = options.limit; 
+  console.log("limit: " + limit);
   var written = 0;  		 
 
   function ondata(chunk) {
@@ -33,14 +34,23 @@ pipe = function(source, dest, options, callback) {
 		    source.pause();   
 	    } 				    
     
-      debugger;
-      //split the chunk. Write one part to the stream and return the overhead.
-      var over = written - limit; 						
-      var last = chunk.slice(0, chunk.length - over); 
-          
-      if(over != 0){      
-          var overhead = chunk.slice(chunk.length - over);
+      try{
+        //split the chunk. Write one part to the stream and return the overhead.
+        var over = written - limit; 						
+        var last = chunk.slice(0, chunk.length - over); 
+
+        if(over != 0){      
+            var overhead = chunk.slice(chunk.length - over);
+        }
       }
+      catch(e){
+        console.log(e);
+        console.log("over, writte, limit, last", over, written, limit, last);
+        console.log("chunk length: " + chunk.length);
+        console.log("chunk: ", chunk);
+        console.trace();
+      }
+          
 
       //write last chunk to target.
       //console.log("PIPE writing last " + last.length + " bytes to socket.");
