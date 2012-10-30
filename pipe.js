@@ -89,16 +89,9 @@ function pipeWebSockets(session){
       Conn2 = session[1];
 
   function pipeOneWay(src,targ){
-
-    src.socket.on('data',function(){
-      targ.touch();
-      });
-
     src.on('Message',
       function(msg){
-        msg.on('Frame', function(frame){
-          frame.redirect(targ.socket);
-        });
+        targ.send(msg);
       });
     src.on('close',function(){
         console.log("Session " + src.pid + "was closed: Closing partner session " + targ.pid);

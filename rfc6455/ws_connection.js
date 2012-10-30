@@ -24,4 +24,3 @@ Connection.prototype.ping = function() {
 }
 
 module.exports = Connection;
-

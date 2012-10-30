@@ -1,40 +1,129 @@
-///		
-//				RFC6455	-	THE WEBSOCKET PROTOCOL
-//
-//  Implementation of rfc6455 (IETF WebSocket Draft 17). Instead of whole
-//  messages this protocol emits the messages at the start of the transmission.
-//  The messages emit single frames, which can be redirected directly to
-//  another stream.
-///
-//  Require
-//
+/**
+ *				RFC6455	-	THE WEBSOCKET PROTOCOL
+ *
+ * Implementation of rfc6455 (IETF WebSocket Draft 17). Instead of whole
+ * messages this protocol emits the messages at the start of the transmission.
+ * The messages emit single frames, which can be redirected directly to
+ * another stream.
+ */
+
 var net = require('net'),
   http = require('http'),
   url = require('url'),
   crypto = require('crypto'),
-  module = require('module'),
   events = require('events'),
   stream = require('stream'),
   lpipe = require('../limited_pipe.js'),
+  Masking_Provider = require('./masking_provider.js'),
   ws_frame = require('./ws_frame.js'),
   ws_message = require('./ws_message.js'),
   ws_connection = require('./ws_connection.js');
+  
 
 /**
  * Settings
  */
+
 var secWebSocketGUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 var closeTimout = 1000; //ms
 var pingResponseTime = 500; //ms
 
+/**
+ *  Socket
+ */
+var socket;
 
 /**
  * Use this protocol to handle the connection 
  * request.
  */
-exports.use = function(req, socket, head, onConnReq) {
-	handleRequest(req, socket, head, onConnReq);
+
+module.exports = {
+  use: function(req, sock, head, onConnReq) {
+    socket = sock;
+	  handleRequest(req, sock, head, onConnReq);
+  }
 };
+  
+
+
+/**
+ *  Send a frame to the client.
+ *  @frame  {ws_frame}  
+ */
+
+function sendFrame(frame){
+	//Masked bit is set?
+	if (frame.mask) {
+    var overhead;
+
+		/*  Create answer header  */
+		var header = frame.getHeader();
+		var offs = header.length;
+		socket.write(header);
+
+    /* Calculate missing bytes */
+		var missing = frame.length - frame.body.length;
+
+    if(missing < 0){
+      /* The body is longer than the message. Split overhead from body.  */
+      overhead = frame.body.slice(frame.length,frame.body.length);
+
+      /* set the message as new body */
+      frame.body = frame.body.slice(0,frame.length);
+    }
+
+		/*  Redirect Payload  */
+		var maskProv = new Masking_Provider(frame.masking_key);
+		maskProv.maskData(frame.body);
+		socket.write(frame.body);
+      
+		if (missing > 0) {
+      /* the message is longer than the received chunk */
+
+			var msk = function(msgBuff) {
+				maskProv.maskData(msgBuff);
+			}
+      
+      /* mask every chunk of remaining data when received */
+			frame.socket.on('data', msk);
+      
+      /* stream <missing> bytes of data to the other socket */
+			lpipe(frame.socket, socket, {
+				limit: missing
+			},
+			function(overhead) {
+        console.log("Overhead returned by pipe: ", overhead);
+        /*  remove the old masking provider from the */
+				frame.socket.removeListener('data', msk);
+
+				if (overhead) {
+          /* Undo the unnecessary masking */
+          console.log("self.length ", frame.length);
+					maskProv.forceOffset(frame.length);
+					maskProv.maskData(overhead);
+				}
+        /* Emit the overhead. This is the start of the next data frame  */
+				frame.emit('transferred', overhead);
+			});
+		}
+		else {
+      if(overhead){
+        /* Emit the overhead. This is the start of the next data frame  */
+        frame.emit('transferred',overhead);
+      }
+      else{
+        /* There is no overhead. Emit only the 'tranferred' event */
+        frame.emit('transferred')
+      }
+		}
+	}
+	else {
+		console.log("Masked-Flag is not set: Sending protocol error 1002.");
+		//protocol error 1002
+	}
+}
+
 
 /**
  * When a pong was received this will be set to true.
@@ -94,14 +183,24 @@ function handleRequest(req, socket, head, conn) {
 				Connection.query = p.query;
 
         /**
-         * Logs a new action to avoid pinging.
+         *  Send a message
          */
-        Connection.touch = function(){
-          console.log(socket.remotePort, ": touched...");
-          actionLog.action();
+        Connection.send = function(message){
+          console.log("Message start");
+          var sending = true;
+          var fin = false;
+          message.on('Frame',function(frame){
+            frame.on('transferred',function(){
+              if(frame.fin){
+                sending = false;
+                console.log("Message end");
+              }
+            });
+            sendFrame(frame);
+          });
         }
+
 				acceptRequest(secKey, head, socket, Connection);
-        pingInterval(750,socket,Connection);
 				return Connection;
 			}
 		};
@@ -254,10 +353,11 @@ function handleMessages(socket, connection) {
 			/*  FAIL THE WEBSOCKET CONNECTION */
 			console.log(frame.error);
 		}
-
+    
 		switch (frame.OpCode) {
 		case 0x0:
 			//continuation frame
+      console.log("continuation frame");
       message.fin = frame.fin;
 			handleDataFrame(message);
 			break;
@@ -267,12 +367,14 @@ function handleMessages(socket, connection) {
 				console.log("Error: New Message received while old one wasn't complete.");
 			}
 			message = new ws_message('text frame');
+      console.log("text frame");
       message.fin = frame.fin;
 			connection.emit('Message', message);
 			handleDataFrame(message);
 			break;
 		case 0x2:
 			//binary frame
+      console.log("bin frame");
 			if (message && message.completed == false) {
 				console.log("Error: New Message received while old one wasn't complete.");
 			}
@@ -302,7 +404,6 @@ function handleMessages(socket, connection) {
 		}
 
 		/*   Handle a data frame with the given message as context.   */
-
 		function handleDataFrame(message) {
 			frame.on('transferred', function(overhead) {
 				if (overhead) {
@@ -318,7 +419,6 @@ function handleMessages(socket, connection) {
 		}
 
 		/*  Handling of control frames  */
-
 		function handlePing() {
 			var pong = new ws_frame.Frame(null, 'Pong', true);
 			socket.write(pong.getHeader());
