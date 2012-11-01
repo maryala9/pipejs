@@ -29,19 +29,13 @@ var closeTimout = 1000; //ms
 var pingResponseTime = 500; //ms
 
 /**
- *  Socket
- */
-var socket;
-
-/**
  * Use this protocol to handle the connection 
  * request.
  */
 
 module.exports = {
-  use: function(req, sock, head, onConnReq) {
-    socket = sock;
-	  handleRequest(req, sock, head, onConnReq);
+  use: function(req, socket, head, onConnReq) {
+	  handleRequest(req, socket, head, onConnReq);
   }
 };
   
@@ -52,14 +46,16 @@ module.exports = {
  *  @frame  {ws_frame}  
  */
 
-function sendFrame(frame){
-	//Masked bit is set?
+function sendFrame(frame,socket){
+  /* masked bit must be set */
 	if (frame.mask) {
     var overhead;
 
 		/*  Create answer header  */
 		var header = frame.getHeader();
 		var offs = header.length;
+    //console.log("the frame socket: " + frame.socket.remotePort);
+    //console.log("writing header %s to socket: %s : ", header.length, socket.remotePort);
 		socket.write(header);
 
     /* Calculate missing bytes */
@@ -76,6 +72,7 @@ function sendFrame(frame){
 		/*  Redirect Payload  */
 		var maskProv = new Masking_Provider(frame.masking_key);
 		maskProv.maskData(frame.body);
+    //console.log("writing body %s to socket: %s : ", frame.body.length, socket.remotePort);
 		socket.write(frame.body);
       
 		if (missing > 0) {
@@ -93,13 +90,13 @@ function sendFrame(frame){
 				limit: missing
 			},
 			function(overhead) {
-        console.log("Overhead returned by pipe: ", overhead);
+        //console.log("Overhead returned by pipe: ", overhead);
         /*  remove the old masking provider from the */
 				frame.socket.removeListener('data', msk);
 
 				if (overhead) {
           /* Undo the unnecessary masking */
-          console.log("self.length ", frame.length);
+          //console.log("self.length ", frame.length);
 					maskProv.forceOffset(frame.length);
 					maskProv.maskData(overhead);
 				}
@@ -109,17 +106,19 @@ function sendFrame(frame){
 		}
 		else {
       if(overhead){
+        //console.log("emit the overhead. This is the start of the next data frame: ", overhead);
         /* Emit the overhead. This is the start of the next data frame  */
         frame.emit('transferred',overhead);
       }
       else{
+        //console.log("There is no overhead. Emit only the transferred event.", overhead);
         /* There is no overhead. Emit only the 'tranferred' event */
         frame.emit('transferred')
       }
 		}
 	}
 	else {
-		console.log("Masked-Flag is not set: Sending protocol error 1002.");
+		//console.log("Masked-Flag is not set: Sending protocol error 1002.");
 		//protocol error 1002
 	}
 }
@@ -130,27 +129,6 @@ function sendFrame(frame){
  */
 var ponged;
 
-
-/**
- * Logs the timestamp of the last action and determines 
- * if the application is idle.
- */
-var actionLog = (function(){
-  var d = 1000;
-  var lastAct = Date.now();
-  return {
-    action: function(){
-      lastAct = Date.now();
-    },
-    isIdle: function(){
-      return ((lastAct + d) < Date.now());
-    }
-  };
-})();
-
-/**
- * Application
- */
 function handleRequest(req, socket, head, conn) {
 	var p = url.parse(req.url),
 	ressName = p.pathname,
@@ -181,26 +159,41 @@ function handleRequest(req, socket, head, conn) {
 				Connection.state = "connected";
 				Connection.path = p.pathname;
 				Connection.query = p.query;
-
+  
+        /**
+         *  handles the pinging, when nothing is send
+         */
+        var pinger = pingInterval(1000,socket,Connection);
         /**
          *  Send a message
          */
         Connection.send = function(message){
-          console.log("Message start");
+          pinger.stop();
+          //console.log("Message start. Connection socket: " + Connection.socket.remotePort + " this socket: " + socket.remotePort);
           var sending = true;
           var fin = false;
           message.on('Frame',function(frame){
             frame.on('transferred',function(){
+              console.log(Connection.socket.remotePort + ": frame transferred.");
               if(frame.fin){
                 sending = false;
-                console.log("Message end");
+                console.log(Connection.socket.remotePort + ": Message ended....");
+                /*
+                 *  Start pinging.
+                 */
+                pinger.start();
               }
             });
-            sendFrame(frame);
+            sendFrame(frame,socket);
           });
         }
 
 				acceptRequest(secKey, head, socket, Connection);
+
+        /*
+         *  Connection initialised. Start pinging.
+         */
+        pinger.start();
 				return Connection;
 			}
 		};
@@ -217,20 +210,41 @@ function handleRequest(req, socket, head, conn) {
  * the connection isn't transferring a message.
  */
 function pingInterval(intervall, socket, connection){
-  var intId = setInterval(
-    function(){
-      if(connection.state === 'closed' ||
-         connection.state === 'closing'
-        ){
-        stop();
-        return;
-      }
-      sendPing(socket,connection)
-    },
-    intervall);
+  var intId;
+  var stopped = true;
   var stop = function(){
+    console.log(socket.remotePort + ": pinging stopped. clearing Ping setInterval");
     clearInterval(intId);
   };
+  return {
+    start: function(){
+      if(stopped){
+        console.log(socket.remotePort + ": starting to ping in an intervall of " + intervall);
+        stopped = false;
+        intId = setInterval(
+          function(){
+            if(connection.state === 'closed' ||
+               connection.state === 'closing'
+              ){
+              stop();
+              return;
+            }
+            if(!stopped){
+              sendPing(socket,connection);
+            }else{
+              console.log(socket.remotePort + ": not pinging to this socket. Stop was called in the meantime.");
+            }
+          },
+          intervall);
+      }
+    },
+    stop: function(){
+      if(!stopped){
+        stopped = true;
+        stop(); 
+      }
+    }
+  }
 }
 
 /**
@@ -240,22 +254,18 @@ function pingInterval(intervall, socket, connection){
  */
 function sendPing(socket,connection){
   console.log(socket.remotePort, " sending ping...");
-  if(actionLog.isIdle()){
-    var pingFrame = new ws_frame.Frame(null,'ping',true,null);
-    socket.write(pingFrame.getHeader());
-    ponged = false;
-    /*
-    setTimeout(function(){
-      if(!ponged){
-        console.log("Error: The client did not answer on a ping. " +
-          "It is assumed that the connection is lost.");
-        endConnection(connection);     
-        }
-      },pingResponseTime);
-      */
-  }else{
-    console.log(socket.remotePort, " is busy. Not pinging...");
-  }
+  var pingFrame = new ws_frame.Frame(null,'ping',true,null);
+  socket.write(pingFrame.getHeader());
+  ponged = false;
+  /*
+  setTimeout(function(){
+    if(!ponged){
+      console.log("Error: The client did not answer on a ping. " +
+        "It is assumed that the connection is lost.");
+      endConnection(connection);     
+      }
+    },pingResponseTime);
+   */
 }
 
 /**
@@ -314,7 +324,7 @@ function handleMessages(socket, connection) {
 	socket.on('end', function() {
 		if (connection.state !== "closing" && connection.state !== "closed") {
 			//socket was unecpectedly closed.
-			console.log("Unexpected end. Closing connection.");
+			console.log(Connection.socket.remotePort + ": Unexpected end. Closing connection.");
 			connection.state = "closed";
 			connection.close();
 		}
@@ -338,13 +348,16 @@ function handleMessages(socket, connection) {
 		closeTimout);
 	});
 
-	//Takes the first bytes of the buffer and reads them as a websocket header.
-	//	(See http://tools.ietf.org/html/rfc6455#section-5.1)
+	 
+  /**
+   * Takes the first bytes of the buffer and reads them as a websocket header.
+   * (See http://tools.ietf.org/html/rfc6455#section-5.1)
+	 */	
 	function handleHeader(buffer) {
     /* the connection is still used */
     var idle = false;
 
-		//console.log("handling message header. Socket Port: " + socket.remotePort);
+//   console.log(socket.remotePort + ": handling message header.");
 		socket.pause();
 		//try to read the frame header.
 		frame = ws_frame.createFromBuffer(buffer, socket);
@@ -357,7 +370,7 @@ function handleMessages(socket, connection) {
 		switch (frame.OpCode) {
 		case 0x0:
 			//continuation frame
-      console.log("continuation frame");
+      console.log("%s: continuation frame",socket.remotePort);
       message.fin = frame.fin;
 			handleDataFrame(message);
 			break;
@@ -367,14 +380,14 @@ function handleMessages(socket, connection) {
 				console.log("Error: New Message received while old one wasn't complete.");
 			}
 			message = new ws_message('text frame');
-      console.log("text frame");
+      console.log("%s: text frame",socket.remotePort);
       message.fin = frame.fin;
 			connection.emit('Message', message);
 			handleDataFrame(message);
 			break;
 		case 0x2:
 			//binary frame
-      console.log("bin frame");
+      console.log("%s: binary frame",socket.remotePort);
 			if (message && message.completed == false) {
 				console.log("Error: New Message received while old one wasn't complete.");
 			}
@@ -394,22 +407,27 @@ function handleMessages(socket, connection) {
 			}
 			break;
 		case 0x9:
+      console.log("%s: ping frame",socket.remotePort);
 			//ping
 			handlePing();
 			break;
 		case 0xA:
 			//pong
+      console.log("%s: pong frame",socket.remotePort);
 			handlePong();
 			break;
 		}
 
 		/*   Handle a data frame with the given message as context.   */
 		function handleDataFrame(message) {
+      //console.log("handling data frame",message);
+
 			frame.on('transferred', function(overhead) {
 				if (overhead) {
 					handleHeader(overhead);
 				}
 				else {  
+          console.log("waiting for new header...");
 					socket.once('data', handleHeader);
 					//the pipe has paused the socket, resume it.
 					socket.resume();
@@ -427,7 +445,6 @@ function handleMessages(socket, connection) {
 		}
 
 		function handlePong() {
-			console.log("pong received");
       ponged = true;
 			socket.once('data', handleHeader);
 		}

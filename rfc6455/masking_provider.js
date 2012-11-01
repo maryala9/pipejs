@@ -18,6 +18,7 @@ var MaskingProvider = function(masking_key) {
 }
 
 MaskingProvider.prototype.maskData = function(msgBuff) {
+  //console.log("masking data: " + msgBuff.length);
   var offsMsk = this.m.readInt32BE(this.offs);
 
   /* mask bytes 'fast' */

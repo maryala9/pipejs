@@ -89,8 +89,10 @@ function pipeWebSockets(session){
       Conn2 = session[1];
 
   function pipeOneWay(src,targ){
+    //console.log("piping messages from src %s to target %s",src.socket.remotePort, targ.socket.remotePort);
     src.on('Message',
       function(msg){
+        console.log("sending message from src %s to target %s",src.socket.remotePort, targ.socket.remotePort);
         targ.send(msg);
       });
     src.on('close',function(){

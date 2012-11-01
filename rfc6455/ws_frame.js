@@ -180,7 +180,6 @@ Frame.prototype.getHeader = function() {
 	//NO FRAMING. ONLY DONE BY CLIENT.
 	var t = header.slice(0, offs);
 
-  console.log("created header: ",t);
 	return t;
 }
 
